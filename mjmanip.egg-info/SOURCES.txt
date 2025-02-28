@@ -1,6 +1,0 @@
-pyproject.toml
-mjmanip/__init__.py
-mjmanip.egg-info/PKG-INFO
-mjmanip.egg-info/SOURCES.txt
-mjmanip.egg-info/dependency_links.txt
-mjmanip.egg-info/top_level.txt

@@ -1,0 +1,11 @@
+results/
+data/
+*.log
+*.pth 
+*.pyc 
+wandb/ 
+*.egg-info
+*.prof
+*.obj
+*.mtl
+*.pyc

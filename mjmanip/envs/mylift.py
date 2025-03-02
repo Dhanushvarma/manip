@@ -128,9 +128,17 @@ class MyLift(composer.Task):
         self._target_height = _DISTANCE_TO_LIFT + initial_prop_height
         physics.bind(self._target_height_site).pos[2] = self._target_height
 
+        # gravity compensation for the robot
+        body_names = [
+            f"{self._arm.mjcf_model.model}/{body.name}"
+            for body in self._arm.mjcf_model.find_all("body")
+        ]
+        body_ids = [physics.model.body(name).id for name in body_names]
+        physics.model.body_gravcomp[body_ids] = 1.0
+
     def before_step(self, physics, action, random_state):
         return super().before_step(physics, action, random_state)
-    
+
     def before_substep(self, physics, action, random_state):
         return super().before_substep(physics, action, random_state)
 

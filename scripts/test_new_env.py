@@ -46,9 +46,9 @@ def sample_random_action():
 # the camera observations.
 frames = []
 timestep = env.reset()
-frames.append(timestep.observation["front_close"])
+frames.append(timestep.observation["front_flat_far"])
 while not timestep.last():
     timestep = env.step(sample_random_action())
-    frames.append(timestep.observation["front_close"])
+    frames.append(timestep.observation["front_flat_far"])
 all_frames = np.concatenate(frames, axis=0)
 display_video(all_frames, 30)

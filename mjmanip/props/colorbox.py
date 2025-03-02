@@ -16,7 +16,6 @@ class ColorBoxWithSites(Box):
         )
 
         self.geom.rgba = rgba
-        print("Setting rgba to: ", rgba)
 
         corner_positions = itertools.product(
             [half_lengths[0], -half_lengths[0]],

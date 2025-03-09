@@ -6,28 +6,38 @@ class StandardArena:
         """
         Initializes the StandardArena object by creating a new MjSpec model and adding a solid color floor and lights.
         """
-        self._spec = mj.MjSpec()
+        self._arena = mj.MjSpec()
 
         # Set options
-        self._spec.option.timestep = 0.002
-        self._spec.option.flag.warmstart = (
-            True  # In mjSpec, use boolean instead of "enable"
+        self._arena.option.timestep = 0.002
+        # TODO: set warm start
+
+        _chequered = self._arena.add_texture(
+            name="chequered",
+            type=mj.mjtTexture.mjTEXTURE_2D,
+            builtin=mj.mjtBuiltin.mjBUILTIN_CHECKER,
+            width=300,
+            height=300,
+            rgb1=[0.2, 0.3, 0.4],
+            rgb2=[0.3, 0.4, 0.5],
         )
 
-        # Create floor material (solid color)
-        self._spec.add_material(
-            name="grid",
-            rgba=[0.3, 0.4, 0.5, 1.0],
-            reflectance=0.2,
+        _grid = self._arena.add_material(
+            name="grid", texrepeat=[5, 5], reflectance=0.2
+        ).textures[mj.mjtTextureRole.mjTEXROLE_RGB] = "chequered"
+
+        # add floor
+        self._arena.worldbody.add_geom(
+            type=mj.mjtGeom.mjGEOM_PLANE, size=[2, 2, 0.1], material="grid"
         )
 
         # Add floor
-        self._spec.worldbody.add_geom(
+        self._arena.worldbody.add_geom(
             type=mj.mjtGeom.mjGEOM_PLANE, size=[2, 2, 0.1], material="grid"
         )
 
         # Add skybox
-        self._spec.add_texture(
+        self._arena.add_texture(
             name="skybox",
             type=mj.mjtTexture.mjTEXTURE_SKYBOX,
             builtin=mj.mjtBuiltin.mjBUILTIN_GRADIENT,
@@ -39,55 +49,41 @@ class StandardArena:
 
         # Add lights
         for x in [-2, 2]:
-            self._spec.worldbody.add_light(
-                pos=[x, -1, 3], dir=[-x, 1, -2], castshadow=False
-            )
+            self._arena.worldbody.add_light(pos=[x, -1, 3], dir=[-x, 1, -2])
 
+        # TODO: check if this is needed
         # Enable copying during attachment to handle namespace conflicts
-        self._spec.copy_during_attach = True
+        # self._arena.copy_during_attach = True
 
-    def attach(self, child, pos=[0, 0, 0], quat=[1, 0, 0, 0]):
+        # count to see how many objects are added
+        self._count = 0
+
+    def attach(self, child_spec, pos=[0, 0, 0], quat=[1, 0, 0, 0]):
         """
-        Attaches a child element to the MJCF model at a specified position and orientation.
-
-        Args:
-            child: The child element to attach.
-            pos: The position of the child element.
-            quat: The orientation of the child element.
-
-        Returns:
-            The frame of the attached child element.
+        Attaches a child object to the arena at the specified position and orientation.
         """
+
+        self._count += 1
+
         # Create a frame at the specified position and orientation
-        frame = self._spec.worldbody.add_frame(pos=pos, quat=quat)
+        _site = self._arena.worldbody.add_site(pos=pos, quat=quat)
 
         # Attach the child to this frame
-        # Note: We're assuming child is a body that can be attached
-        frame.attach_body(child, "", "")
+        _body = _site.attach_body(child_spec.worldbody, "", "-" + str(self._count))
 
-        return frame
-
-    def attach_free(self, child, pos=[0, 0, 0], quat=[1, 0, 0, 0]):
+    def attach_free(self, child_spec, pos=[0, 0, 0], quat=[1, 0, 0, 0]):
         """
-        Attaches a child element to the MJCF model with a free joint.
-
-        Args:
-            child: The child element to attach.
-            pos: The position of the child element.
-            quat: The orientation of the child element.
-
-        Returns:
-            The frame of the attached child element.
+        Attaches a child object to the arena at the specified position and orientation with a free joint.
         """
-        # First attach the child
-        frame = self.attach(child, pos, quat)
+        self._count += 1
 
-        # Add a free joint to the first body of the attached element
-        attached_body = frame.first_body()
-        if attached_body:
-            attached_body.add_freejoint()
+        # Create a frame at the specified position and orientation
+        _site = self._arena.worldbody.add_site(pos=pos, quat=quat)
 
-        return frame
+        # Attach the child to this frame
+        _body = _site.attach_body(child_spec.worldbody, "", "-" + str(self._count))
+
+        _body.add_freejoint()
 
     @property
     def spec(self):
@@ -97,7 +93,7 @@ class StandardArena:
         Returns:
             The MjSpec model.
         """
-        return self._spec
+        return self._arena
 
     def attach_camera(
         self, name="camera", pos=[0, 0, 0], quat=[1, 0, 0, 0], fovy=45, mode="fixed"
@@ -115,13 +111,14 @@ class StandardArena:
         Returns:
             The added camera.
         """
-        camera = self._spec.worldbody.add_camera(
+
+        # TODO: verify if this is correct
+
+        camera = self._arena.worldbody.add_camera(
             name=name,
             fovy=fovy,
             pos=pos,
             quat=quat,
-            # In MuJoCo's mjSpec, the mode is passed directly
-            # If needed, this can be mapped to mj.mjtCamera enums
         )
 
         return camera

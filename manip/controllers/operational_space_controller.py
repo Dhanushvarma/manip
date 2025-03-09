@@ -1,23 +1,18 @@
 from manip.controllers import JointEffortController
-
 import numpy as np
-
+import mujoco
 from manip.utils.controller_utils import (
     task_space_inertia_matrix,
     pose_error,
 )
-
-from manip.utils.mujoco_utils import get_site_jac, get_fullM
-
-from manip.utils.transform_utils import (
-    mat2quat,
-)
+from manip.utils.transform_utils import mat2quat
 
 
 class OperationalSpaceController(JointEffortController):
     def __init__(
         self,
-        physics,
+        model,
+        data,
         joints,
         eef_site,
         min_effort: np.ndarray,
@@ -28,9 +23,10 @@ class OperationalSpaceController(JointEffortController):
         vmax_xyz: float,
         vmax_abg: float,
     ) -> None:
+        super().__init__(model, data, joints, min_effort, max_effort)
 
-        super().__init__(physics, joints, min_effort, max_effort)
-
+        self._model = model
+        self._data = data
         self._eef_site = eef_site
         self._kp = kp
         self._ko = ko
@@ -38,8 +34,15 @@ class OperationalSpaceController(JointEffortController):
         self._vmax_xyz = vmax_xyz
         self._vmax_abg = vmax_abg
 
-        self._eef_id = self._physics.bind(eef_site).element_id
-        self._jnt_dof_ids = self._physics.bind(joints).dofadr
+        # Get eef site ID
+        self._eef_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, eef_site)
+
+        # Get joint IDs and DOF addresses
+        self._joint_ids = [
+            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+            for joint_name in joints
+        ]
+        self._jnt_dof_ids = [model.jnt_dofadr[jid] for jid in self._joint_ids]
         self._dof = len(self._jnt_dof_ids)
 
         self._task_space_gains = np.array([self._kp] * 3 + [self._ko] * 3)
@@ -50,44 +53,41 @@ class OperationalSpaceController(JointEffortController):
         self._scale_abg = vmax_abg / self._ko * self._kv
 
     def run(self, target, grip=None):
-
-        #  is a 7D vector [x, y, z, qx, qy, qz, qw]
+        # target is a 7D vector [x, y, z, qx, qy, qz, qw]
         target_pose = target[[0, 1, 2, 4, 5, 6, 3]]
 
-        # Get the Jacobian matrix for the end-effector.
-        J = get_site_jac(
-            self._physics.model.ptr,
-            self._physics.data.ptr,
-            self._eef_id,
-        )
+        # Get the Jacobian matrix for the end-effector
+        jacp = np.zeros((3, self._model.nv))
+        jacr = np.zeros((3, self._model.nv))
+        mujoco.mj_jacSite(self._model, self._data, jacp, jacr, self._eef_id)
+        J = np.vstack((jacp, jacr))
         J = J[:, self._jnt_dof_ids]
 
-        # Get the mass matrix and its inverse for the controlled degrees of freedom (DOF) of the robot.
-        M_full = get_fullM(
-            self._physics.model.ptr,
-            self._physics.data.ptr,
-        )
-        M = M_full[self._jnt_dof_ids, :][:, self._jnt_dof_ids]
+        # Get the mass matrix for the controlled degrees of freedom (DOF)
+        M_full = np.zeros((self._model.nv, self._model.nv))
+        mujoco.mj_fullM(self._model, M_full, self._data.qM)
+        M = M_full[np.ix_(self._jnt_dof_ids, self._jnt_dof_ids)]
         Mx, M_inv = task_space_inertia_matrix(M, J)
 
-        # Get the joint velocities for the controlled DOF.
-        dq = self._physics.bind(self._joints).qvel
+        # Get the joint velocities for the controlled DOF
+        dq = np.array([self._data.qvel[dof_id] for dof_id in self._jnt_dof_ids])
 
-        # Get the end-effector position, orientation matrix, and twist (spatial velocity).
-        ee_pos = self._physics.bind(self._eef_site).xpos
-        ee_quat = mat2quat(self._physics.bind(self._eef_site).xmat.reshape(3, 3))
+        # Get the end-effector position and orientation
+        ee_pos = self._data.site_xpos[self._eef_id].copy()
+        site_xmat = self._data.site_xmat[self._eef_id].reshape(3, 3)
+        ee_quat = mat2quat(site_xmat)
         ee_pose = np.concatenate([ee_pos, ee_quat])
 
-        # Calculate the pose error (difference between the target and current pose).
+        # Calculate the pose error (difference between target and current pose)
         pose_err = pose_error(target_pose, ee_pose)
 
-        # Initialize the task space control signal (desired end-effector motion).
+        # Initialize the task space control signal
         u_task = np.zeros(6)
 
-        # Calculate the task space control signal.
+        # Calculate the task space control signal
         u_task += self._scale_signal_vel_limited(pose_err)
 
-        # joint space control signal
+        # Joint space control signal
         u = np.zeros(self._dof)
 
         # Add the task space control signal to the joint space control signal
@@ -96,8 +96,11 @@ class OperationalSpaceController(JointEffortController):
         # Add damping to joint space control signal
         u += -self._kv * np.dot(M, dq)
 
-        # Add gravity compensation to the target effort
-        u += self._physics.bind(self._joints).qfrc_bias
+        # Add gravity compensation
+        qfrc_bias = np.array(
+            [self._data.qfrc_bias[dof_id] for dof_id in self._jnt_dof_ids]
+        )
+        u += qfrc_bias
 
         # HACK(dhanush): WidowX gripper control
         if grip is not None:
@@ -112,7 +115,7 @@ class OperationalSpaceController(JointEffortController):
                 u[-2] = -grip_torque
                 u[-1] = grip_torque
 
-        # send the target effort to the joint effort controller
+        # Send the target effort to the joint effort controller
         super().run(u)
 
     def _scale_signal_vel_limited(self, u_task: np.ndarray) -> np.ndarray:

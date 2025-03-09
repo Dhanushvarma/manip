@@ -1,71 +1,69 @@
+import mujoco as mj
 import numpy as np
 
-
-class Target(object):
-    """
-    A class representing a pool cue with motion capture capabilities.
-    """
-
-    def __init__(self, mjcf_root):
-        """
-        Initializes a new instance of the PoolCueMoCap class.
+class Target:
+    def __init__(self, spec):
+        """Initialize a target.
 
         Args:
-            mjcf_root: The root element of the MJCF model.
+            spec: MjSpec model to which this target will be added.
         """
-        self._mjcf_root = mjcf_root
-
-        # Add a mocap body to the worldbody
-        self._mocap = self._mjcf_root.worldbody.add("body", name="mocap", mocap=True)
-        self._mocap.add(
-            "geom",
-            type="box",
-            size=[0.015] * 3,
-            rgba=[1, 0, 0, 0.2],
-            conaffinity=0,
-            contype=0,
+        self._spec = spec
+        
+        # Add mocap body to the worldbody
+        self._mocap = self._spec.worldbody.add_body(name="mocap", mocap=True)
+        
+        # Add a site to visualize the target
+        # For sphere geometry, need size with 3 elements (only first is used but API requires 3)
+        self._site = self._mocap.add_site(
+            name="target_site",
+            type=mj.mjtGeom.mjGEOM_SPHERE,
+            size=[0.02, 0, 0],  # For sphere, only first value is used but need 3 elements
+            rgba=[1, 0, 0, 0.5]
         )
-
-    @property
-    def mjcf_root(self) -> object:
-        """
-        Gets the root element of the MJCF model.
-
-        Returns:
-            The root element of the MJCF model.
-        """
-        return self._mjcf_root
-
-    @property
-    def mocap(self) -> object:
-        """
-        Gets the mocap body.
-
-        Returns:
-            The mocap body.
-        """
-        return self._mocap
-
-    def set_mocap_pose(self, physics, position=None, quaternion=None):
-        """
-        Sets the pose of the mocap body.
-
+        
+        # Store the body name for later use
+        self.body_name = self._mocap.name
+        
+    def set_mocap_pose(self, physics, position, quaternion):
+        """Set the pose of the mocap body.
+        
         Args:
-            physics: The physics simulation.
-            position: The position of the mocap body.
-            quaternion: The quaternion orientation of the mocap body.
+            physics: MuJoCo physics/data object.
+            position: Target position.
+            quaternion: Target orientation as quaternion.
         """
-
-        if position is not None:
-            physics.bind(self.mocap).mocap_pos[:] = position
-        if quaternion is not None:
-            physics.bind(self.mocap).mocap_quat[:] = quaternion
-
+        # Get the body ID
+        body_id = mj.mj_name2id(physics.model, mj.mjtObj.mjOBJ_BODY, self.body_name)
+        
+        # Get the mocap ID for this body
+        if physics.model.body_mocapid[body_id] != -1:
+            mocap_id = physics.model.body_mocapid[body_id]
+            
+            # Set the mocap pose
+            physics.data.mocap_pos[mocap_id] = position
+            physics.data.mocap_quat[mocap_id] = quaternion
+    
     def get_mocap_pose(self, physics):
-
-        position = physics.bind(self.mocap).mocap_pos[:]
-        quaternion = physics.bind(self.mocap).mocap_quat[:]
-
-        pose = np.concatenate([position, quaternion])
-
-        return pose
+        """Get the current pose of the mocap body.
+        
+        Args:
+            physics: MuJoCo physics/data object.
+        
+        Returns:
+            pose: 7-element array with [position, quaternion]
+        """
+        # Get the body ID
+        body_id = mj.mj_name2id(physics.model, mj.mjtObj.mjOBJ_BODY, self.body_name)
+        
+        # Get the mocap ID for this body
+        if physics.model.body_mocapid[body_id] != -1:
+            mocap_id = physics.model.body_mocapid[body_id]
+            
+            # Get the mocap pose
+            position = physics.data.mocap_pos[mocap_id].copy()
+            quaternion = physics.data.mocap_quat[mocap_id].copy()
+            
+            return np.concatenate([position, quaternion])
+        
+        return None

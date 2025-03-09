@@ -2,8 +2,8 @@
 # coding: utf-8
 
 # Load the gamepad and time libraries
-from manipulator_mujoco.gamepad.gamepad import available
-from manipulator_mujoco.gamepad.controllers import PS4
+from manip.gamepad.gamepad import available
+from manip.gamepad.controllers import PS4
 import time
 
 # Gamepad settings

@@ -11,12 +11,12 @@ import mujoco.viewer
 from dm_control import mjcf
 from dm_control.manipulation.shared.constants import RED, GREEN
 
-from manipulator_mujoco.arenas import StandardArena
-from manipulator_mujoco.robots import Arm
-from manipulator_mujoco.props import Primitive
-from manipulator_mujoco.mocaps import Target
-from manipulator_mujoco.controllers import OperationalSpaceController
-from manipulator_mujoco.utils.consts import RED, GREEN
+from manip.arenas import StandardArena
+from manip.robots import Arm
+from manip.props import Primitive
+from manip.mocaps import Target
+from manip.controllers import OperationalSpaceController
+from manip.utils.consts import RED, GREEN
 
 
 class WidowEnv(gym.Env):

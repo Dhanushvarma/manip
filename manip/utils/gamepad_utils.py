@@ -1,8 +1,8 @@
 import numpy as np
 import time
 
-from manipulator_mujoco.gamepad.gamepad import available
-from manipulator_mujoco.gamepad.controllers import PS4
+from manip.gamepad.gamepad import available
+from manip.gamepad.controllers import PS4
 
 
 def get_gamepad_action(gamepad):

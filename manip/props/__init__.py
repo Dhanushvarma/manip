@@ -1,1 +1,1 @@
-from manipulator_mujoco.props.primitive import Primitive
+from manip.props.primitive import Primitive

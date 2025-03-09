@@ -1,1 +1,1 @@
-from manipulator_mujoco.arenas.standard import StandardArena
+from manip.arenas.standard import StandardArena

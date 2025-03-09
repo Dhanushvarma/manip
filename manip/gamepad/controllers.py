@@ -5,7 +5,7 @@ Standard gamepad mappings.
 Pulled in to Gamepad.py directly.
 """
 
-from manipulator_mujoco.gamepad.gamepad import Gamepad
+from manip.gamepad.gamepad import Gamepad
 
 
 class PS3(Gamepad):

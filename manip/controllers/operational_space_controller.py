@@ -1,15 +1,15 @@
-from manipulator_mujoco.controllers import JointEffortController
+from manip.controllers import JointEffortController
 
 import numpy as np
 
-from manipulator_mujoco.utils.controller_utils import (
+from manip.utils.controller_utils import (
     task_space_inertia_matrix,
     pose_error,
 )
 
-from manipulator_mujoco.utils.mujoco_utils import get_site_jac, get_fullM
+from manip.utils.mujoco_utils import get_site_jac, get_fullM
 
-from manipulator_mujoco.utils.transform_utils import (
+from manip.utils.transform_utils import (
     mat2quat,
 )
 

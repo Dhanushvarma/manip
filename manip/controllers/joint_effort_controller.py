@@ -19,7 +19,7 @@ class JointEffortController:
 
         # Get joint IDs for faster lookup
         self._joint_ids = [
-            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name.name)
             for joint_name in self._joint_names
         ]
 

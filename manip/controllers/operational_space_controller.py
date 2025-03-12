@@ -33,14 +33,14 @@ class OperationalSpaceController(JointEffortController):
         self._kv = kv
         self._vmax_xyz = vmax_xyz
         self._vmax_abg = vmax_abg
-
+        
         # Get eef site ID
-        self._eef_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, eef_site)
+        self._eef_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, eef_site.name)
 
         # Get joint IDs and DOF addresses
         self._joint_ids = [
-            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
-            for joint_name in joints
+            mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint.name)
+            for joint in joints
         ]
         self._jnt_dof_ids = [model.jnt_dofadr[jid] for jid in self._joint_ids]
         self._dof = len(self._jnt_dof_ids)

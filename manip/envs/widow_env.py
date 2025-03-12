@@ -179,8 +179,8 @@ class WidowEnv(gym.Env):
         self._controller_gains = {"kv": 50, "kp": 200, "ko": 200}
         self._robot_rest_joint_cfg = [0, 0, 0, 0, +1.5708, 0, 0.015, -0.015]
 
-        self._image_width = 300
-        self._image_height = 300
+        self._image_width = 224
+        self._image_height = 224
 
         self._table_dims = [0.15, 0.3, 0.075]
         self._cube_prop_size = 0.015
@@ -203,9 +203,10 @@ class WidowEnv(gym.Env):
             self._model, mujoco.mjtObj.mjOBJ_SITE, self._arm.eef_site.name
         )
         pinch_site_pos = self._data.site_xpos[site_id].copy()
-        pinch_site_mat = self._data.site_xmat[site_id].reshape(3, 3)
+        pinch_site_mat = self._data.site_xmat[site_id]
         pinch_site_quat = np.zeros(4)
         mujoco.mju_mat2Quat(pinch_site_quat, pinch_site_mat)
+
         pinch_site_pose = np.concatenate([pinch_site_pos, pinch_site_quat])
 
         # Get joint positions
@@ -229,10 +230,12 @@ class WidowEnv(gym.Env):
 
         # Render views
         renderer.update_scene(self._data, camera=frontview_id)
-        frontview_image = renderer.render()
+        # frontview_image = renderer.render()
+        frontview_image = np.zeros((self._image_height, self._image_width, 3))
 
         renderer.update_scene(self._data, camera=topview_id)
-        topview_image = renderer.render()
+        # topview_image = renderer.render()
+        topview_image = np.zeros((self._image_height, self._image_width, 3))
 
         # Store the frontview image for rendering
         self._current_frame = frontview_image
@@ -396,7 +399,7 @@ class WidowEnv(gym.Env):
         current_ee_pos = self._data.site_xpos[site_id].copy()
 
         # Get current end-effector orientation (fix for quaternion issue)
-        current_ee_mat = self._data.site_xmat[site_id].reshape(3, 3)
+        current_ee_mat = self._data.site_xmat[site_id]
         current_ee_quat = np.zeros(4)
         mujoco.mju_mat2Quat(current_ee_quat, current_ee_mat)
 
@@ -492,6 +495,7 @@ class WidowEnv(gym.Env):
             self._step_start = time.time()
 
         else:  # rgb_array
+            print("RGB")
             renderer = mujoco.Renderer(
                 self._model, self._image_height, self._image_width
             )

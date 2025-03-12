@@ -35,3 +35,22 @@ def get_fullM(model, data):
     mj.mj_fullM(model, M, data.qM)
 
     return M
+
+
+def find_site(body, name):
+    # Check sites in this body
+    site = body.first_site()
+    while site:
+        if site.name == name:
+            return site
+        site = body.next_site(site)
+
+    # Check in child bodies
+    child = body.first_body()
+    while child:
+        result = find_site(child, name)
+        if result:
+            return result
+        child = body.next_body(child)
+
+    return None

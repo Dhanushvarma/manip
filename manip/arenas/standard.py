@@ -10,7 +10,7 @@ class StandardArena:
 
         # Set options
         self._arena.option.timestep = 0.002
-        # TODO: set warm start
+        # TODO : timestep
 
         _chequered = self._arena.add_texture(
             name="chequered",
@@ -27,11 +27,6 @@ class StandardArena:
         ).textures[mj.mjtTextureRole.mjTEXROLE_RGB] = "chequered"
 
         # add floor
-        self._arena.worldbody.add_geom(
-            type=mj.mjtGeom.mjGEOM_PLANE, size=[2, 2, 0.1], material="grid"
-        )
-
-        # Add floor
         self._arena.worldbody.add_geom(
             type=mj.mjtGeom.mjGEOM_PLANE, size=[2, 2, 0.1], material="grid"
         )
@@ -83,6 +78,7 @@ class StandardArena:
         # Attach the child to this frame
         _body = _site.attach_body(child_spec.worldbody, "", "-" + str(self._count))
 
+        # free joint
         _body.add_freejoint()
 
     @property
@@ -111,8 +107,6 @@ class StandardArena:
         Returns:
             The added camera.
         """
-
-        # TODO: verify if this is correct
 
         camera = self._arena.worldbody.add_camera(
             name=name,

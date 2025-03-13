@@ -7,6 +7,8 @@ from manip.utils.controller_utils import (
 )
 from manip.utils.transform_utils import mat2quat
 
+np.set_printoptions(precision=5, threshold=5, edgeitems=3, suppress=True)
+
 
 class OperationalSpaceController(JointEffortController):
     def __init__(
@@ -33,7 +35,7 @@ class OperationalSpaceController(JointEffortController):
         self._kv = kv
         self._vmax_xyz = vmax_xyz
         self._vmax_abg = vmax_abg
-        
+
         # Get eef site ID
         self._eef_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, eef_site.name)
 
@@ -66,7 +68,8 @@ class OperationalSpaceController(JointEffortController):
         # Get the mass matrix for the controlled degrees of freedom (DOF)
         M_full = np.zeros((self._model.nv, self._model.nv))
         mujoco.mj_fullM(self._model, M_full, self._data.qM)
-        M = M_full[np.ix_(self._jnt_dof_ids, self._jnt_dof_ids)]
+        # M = M_full[np.ix_(self._jnt_dof_ids, self._jnt_dof_ids)]
+        M = M_full[self._jnt_dof_ids, :][:, self._jnt_dof_ids]
         Mx, M_inv = task_space_inertia_matrix(M, J)
 
         # Get the joint velocities for the controlled DOF
@@ -96,11 +99,8 @@ class OperationalSpaceController(JointEffortController):
         # Add damping to joint space control signal
         u += -self._kv * np.dot(M, dq)
 
-        # Add gravity compensation
-        qfrc_bias = np.array(
-            [self._data.qfrc_bias[dof_id] for dof_id in self._jnt_dof_ids]
-        )
-        u += qfrc_bias
+        # Add gravity compensation to joint space control signal
+        u += self._data.qfrc_bias[self._jnt_dof_ids]
 
         # HACK(dhanush): WidowX gripper control
         if grip is not None:

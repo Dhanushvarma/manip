@@ -33,10 +33,13 @@ class Target:
     def mocap(self) -> object:
         return self._mocap
 
-    def set_mocap_pose(self, model, data):
-        # TODO
+    def set_mocap_pose(self, data, position, quaternion):
+        data.mocap_pos[0] = position
+        data.mocap_quat[0] = quaternion
         pass
 
-    def get_mocap_pose(self, model, data):
-        # TODO
-        pass
+    def get_mocap_pose(self, data):
+        position = data.mocap_pos[0]
+        quaternion = data.mocap_quat[0]
+        pose = np.concatenate([position, quaternion])
+        return pose

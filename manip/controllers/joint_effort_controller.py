@@ -34,14 +34,14 @@ class JointEffortController:
         target_effort = np.clip(target, self._min_effort, self._max_effort)
 
         # Set the applied forces for each joint
+
+        _dof_indexes = []
         for i, joint_id in enumerate(self._joint_ids):
-            # Convert joint ID to appropriate dof index
             dof_index = self._model.jnt_dofadr[joint_id]
-            self._data.qfrc_applied[dof_index] = target_effort[i]
+            _dof_indexes.append(dof_index)      
+        
+        
+        self._data.qfrc_applied[_dof_indexes] = target_effort
 
     def reset(self) -> None:
-        # Clear any applied forces
-        if hasattr(self, "_joint_ids"):
-            for joint_id in self._joint_ids:
-                dof_index = self._model.jnt_dofadr[joint_id]
-                self._data.qfrc_applied[dof_index] = 0.0
+        pass
